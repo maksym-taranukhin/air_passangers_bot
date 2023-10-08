@@ -267,7 +267,7 @@ export function ChatWindow(props: {
               Can I get a refund if I decide not to travel or if I missed my flight?
             </div>
             <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
-              Can I request a different seat if I'm uncomfortable?
+              Can I request a different seat if I am uncomfortable?
             </div>
           </div>
         </div>  
