@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for weblangchain on 2023-10-03T20:09:50-07:00
+# fly.toml app configuration file generated for air-passenger-chatbot on 2023-10-08T00:44:30-07:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = "weblangchain"
+app = "air-passenger-chatbot"
 primary_region = "lax"
 
 [build]

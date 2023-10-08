@@ -1,36 +1,86 @@
 """Main entrypoint for the app."""
+import asyncio
+from operator import itemgetter
+from typing import Dict, List, Optional, Sequence
+
+import langsmith
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from langchain.callbacks.manager import CallbackManagerForRetrieverRun
 from langchain.chat_models import ChatOpenAI
-from langchain.document_loaders import AsyncHtmlLoader
-from langchain.document_transformers import Html2TextTransformer
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.prompts import (ChatPromptTemplate, MessagesPlaceholder,
-                               PromptTemplate)
-from langchain.retrievers import (ContextualCompressionRetriever,
-                                  TavilySearchAPIRetriever)
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
+from langchain.retrievers import (
+    ContextualCompressionRetriever,
+    TavilySearchAPIRetriever,
+)
 from langchain.retrievers.document_compressors import (
-    DocumentCompressorPipeline, EmbeddingsFilter)
+    DocumentCompressorPipeline,
+    EmbeddingsFilter,
+)
 from langchain.schema import Document
-from langchain.schema.document import Document
 from langchain.schema.language_model import BaseLanguageModel
 from langchain.schema.messages import AIMessage, HumanMessage
 from langchain.schema.output_parser import StrOutputParser
 from langchain.schema.retriever import BaseRetriever
-from langchain.schema.runnable import (Runnable, RunnableBranch,
-                                       RunnableLambda, RunnableMap)
+from langchain.schema.runnable import (
+    Runnable,
+    RunnableBranch,
+    RunnableLambda,
+    RunnableMap,
+)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-# Backup
-from langchain.utilities import GoogleSearchAPIWrapper
 from langserve import add_routes
-from src.chat_types import ChatRequest
-from langchain.chat_models import ChatOpenAI
-from src.utils import _get_retriever
-from src.chains import create_chain
-from src.routs import router
-from src.constants import app
+from langsmith import Client
+from typing_extensions import TypedDict
+
+RESPONSE_TEMPLATE = """\
+You are an expert researcher and writer, tasked with answering any question.
+
+Generate a comprehensive and informative, yet concise answer of 250 words or less for the \
+given question based solely on the provided search results (URL and content). You must \
+only use information from the provided search results. Use an unbiased and \
+journalistic tone. Combine search results together into a coherent answer. Do not \
+repeat text. Cite search results using [${{number}}] notation. Only cite the most \
+relevant results that answer the question accurately. Place these citations at the end \
+of the sentence or paragraph that reference them - do not put them all at the end. If \
+different results refer to different entities within the same name, write separate \
+answers for each entity. If you want to cite multiple results for the same sentence, \
+format it as `[${{number1}}] [${{number2}}]`. However, you should NEVER do this with the \
+same number - if you want to cite `number1` multiple times for a sentence, only do \
+`[${{number1}}]` not `[${{number1}}] [${{number1}}]`
+
+You should use bullet points in your answer for readability. Put citations where they apply \
+rather than putting them all at the end.
+
+If there is nothing in the context relevant to the question at hand, just say "Hmm, \
+I'm not sure." Don't try to make up an answer.
+
+Anything between the following `context` html blocks is retrieved from a knowledge \
+bank, not part of the conversation with the user.
+
+<context>
+    {context}
+<context/>
+
+REMEMBER: If there is no relevant information within the context, just say "Hmm, I'm \
+not sure." Don't try to make up an answer. Anything between the preceding 'context' \
+html blocks is retrieved from a knowledge bank, not part of the conversation with the \
+user.\
+"""
+
+REPHRASE_TEMPLATE = """\
+Given the following conversation and a follow up question, rephrase the follow up \
+question to be a standalone question.
+
+Chat History:
+{chat_history}
+Follow Up Input: {question}
+Standalone Question:"""
 
 
+client = Client()
+
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -47,63 +97,8 @@ class ChatRequest(TypedDict):
     # conversation_id: Optional[str]
 
 
-class BackupRetriever(BaseRetriever):
-    search: GoogleSearchAPIWrapper = GoogleSearchAPIWrapper()
-    num_search_results = 6
-
-    def clean_search_query(self, query: str) -> str:
-        # Some search tools (e.g., Google) will
-        # fail to return results if query has a
-        # leading digit: 1. "LangCh..."
-        # Check if the first character is a digit
-        if query[0].isdigit():
-            # Find the position of the first quote
-            first_quote_pos = query.find('"')
-            if first_quote_pos != -1:
-                # Extract the part of the string after the quote
-                query = query[first_quote_pos + 1 :]
-                # Remove the trailing quote if present
-                if query.endswith('"'):
-                    query = query[:-1]
-        return query.strip()
-
-    def search_tool(self, query: str, num_search_results: int = 1) -> List[dict]:
-        """Returns num_search_results pages per Google search."""
-        query_clean = self.clean_search_query(query)
-        result = self.search.results(query_clean, num_search_results)
-        return result
-
-    def _get_relevant_documents(
-        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
-    ):
-        # Get search questions
-        print("Generating questions for Google Search ...")
-
-        # Get urls
-        print("Searching for relevant urls...")
-        urls_to_look = []
-        search_results = self.search_tool(query, self.num_search_results)
-        print("Searching for relevant urls...")
-        print(f"Search results: {search_results}")
-        for res in search_results:
-            if res.get("link", None):
-                urls_to_look.append(res["link"])
-
-        print(search_results)
-        loader = AsyncHtmlLoader(urls_to_look)
-        html2text = Html2TextTransformer()
-        print("Indexing new urls...")
-        docs = loader.load()
-        docs = list(html2text.transform_documents(docs))
-        for i in range(len(docs)):
-            if search_results[i].get("title", None):
-                docs[i].metadata["title"] = search_results[i]["title"]
-        return docs
-
-
 def get_base_retriever():
-    # return TavilySearchAPIRetriever(k=6, include_raw_content=True, include_images=True)
-    return BackupRetriever()
+    return TavilySearchAPIRetriever(k=6, include_raw_content=True, include_images=True)
 
 
 def _get_retriever():
@@ -220,7 +215,76 @@ chain = create_chain(llm, retriever)
 
 add_routes(app, chain, path="/chat", input_type=ChatRequest)
 
+
+@app.post("/feedback")
+async def send_feedback(request: Request):
+    data = await request.json()
+    run_id = data.get("run_id")
+    if run_id is None:
+        return {
+            "result": "No LangSmith run ID provided",
+            "code": 400,
+        }
+    key = data.get("key", "user_score")
+    vals = {**data, "key": key}
+    client.create_feedback(**vals)
+    return {"result": "posted feedback successfully", "code": 200}
+
+
+@app.post("/test")
+async def test(request: Request):
+    data = await request.json()
+    return data
+
+
+@app.patch("/feedback")
+async def update_feedback(request: Request):
+    data = await request.json()
+    feedback_id = data.get("feedback_id")
+    if feedback_id is None:
+        return {
+            "result": "No feedback ID provided",
+            "code": 400,
+        }
+    client.update_feedback(
+        feedback_id,
+        score=data.get("score"),
+        comment=data.get("comment"),
+    )
+    return {"result": "patched feedback successfully", "code": 200}
+
+
+# TODO: Update when async API is available
+async def _arun(func, *args, **kwargs):
+    return await asyncio.get_running_loop().run_in_executor(None, func, *args, **kwargs)
+
+
+async def aget_trace_url(run_id: str) -> str:
+    for i in range(5):
+        try:
+            await _arun(client.read_run, run_id)
+            break
+        except langsmith.utils.LangSmithError:
+            await asyncio.sleep(1**i)
+
+    if await _arun(client.run_is_shared, run_id):
+        return await _arun(client.read_run_shared_link, run_id)
+    return await _arun(client.share_run, run_id)
+
+
+@app.post("/get_trace")
+async def get_trace(request: Request):
+    data = await request.json()
+    run_id = data.get("run_id")
+    if run_id is None:
+        return {
+            "result": "No LangSmith run ID provided",
+            "code": 400,
+        }
+    return await aget_trace_url(run_id)
+
+
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
