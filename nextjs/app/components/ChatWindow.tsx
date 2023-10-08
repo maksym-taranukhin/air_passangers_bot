@@ -193,18 +193,9 @@ export function ChatWindow(props: {
             {titleText}
           </Heading>
           {/* <Heading fontSize="md" fontWeight={"normal"} mb={1} color={"white"}>
-            Powered by{" "}
-            <a
-              target="_blank"
-              href="https://tavily.com"
-              className="text-sky-400"
-            >
-              Tavily
-            </a>
+            Powered by <a target="_blank" href="https://tavily.com" className="text-sky-400">Tavily</a>
           </Heading> */}
-          <Heading fontSize="lg" fontWeight={"normal"} mb={1} color={"white"}>
-            We appreciate feedback!
-          </Heading>
+          <Heading fontSize="lg" fontWeight={"normal"} mb={1} color={"white"}>We appreciate feedback!</Heading>
         </Flex>
       )}
       <div
@@ -228,13 +219,13 @@ export function ChatWindow(props: {
           <EmptyState onChoice={sendInitialQuestion} />
         )}
       </div>
-      <InputGroup size="md" alignItems={"center"}>
+      <InputGroup size="md" alignItems={"center"} width={"50%"}>
         <Input
           value={input}
           height={"55px"}
           rounded={"full"}
           type={"text"}
-          placeholder="Ask anything..."
+          placeholder="Ask your question or describe your issue..."
           textColor={"white"}
           borderColor={"rgb(58, 58, 61)"}
           onSubmit={(e) => {
@@ -264,82 +255,31 @@ export function ChatWindow(props: {
         </InputRightElement>
       </InputGroup>
       {messages.length === 0 ? (
-        <div className="w-full text-center flex flex-col">
-          <div className="flex grow justify-center w-full mt-4">
-            <div
-              onMouseUp={(e) =>
-                sendInitialQuestion((e.target as HTMLDivElement).innerText)
-              }
-              className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500"
-            >
-              what is langchain?
+        <div className="w-50 text-center flex flex-col items-center">
+          <div className="flex flex-wrap justify-center w-full mt-4">
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
+              If my flight is delayed or canceled, am I eligible for compensation?
             </div>
-            <div
-              onMouseUp={(e) =>
-                sendInitialQuestion((e.target as HTMLDivElement).innerText)
-              }
-              className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500"
-            >
-              history of mesopotamia
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
+              What should I do if my checked baggage is lost?
             </div>
-            <div
-              onMouseUp={(e) =>
-                sendInitialQuestion((e.target as HTMLDivElement).innerText)
-              }
-              className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500"
-            >
-              how to build a discord bot
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
+              Can I get a refund if I decide not to travel or if I missed my flight?
             </div>
-            <div
-              onMouseUp={(e) =>
-                sendInitialQuestion((e.target as HTMLDivElement).innerText)
-              }
-              className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500"
-            >
-              leonardo dicaprio girlfriend
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
+              Can I request a different seat if I'm uncomfortable?
             </div>
           </div>
-          <div className="flex grow justify-center w-full mt-4">
-            <div
-              onMouseUp={(e) =>
-                sendInitialQuestion((e.target as HTMLDivElement).innerText)
-              }
-              className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500"
-            >
-              fun gift ideas for software engineers
-            </div>
-            <div
-              onMouseUp={(e) =>
-                sendInitialQuestion((e.target as HTMLDivElement).innerText)
-              }
-              className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500"
-            >
-              how does a prism separate light
-            </div>
-            <div
-              onMouseUp={(e) =>
-                sendInitialQuestion((e.target as HTMLDivElement).innerText)
-              }
-              className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500"
-            >
-              what bear is best
-            </div>
-          </div>
-        </div>
+        </div>  
       ) : (
         ""
       )}
 
       {messages.length === 0 ? (
         <footer className="flex justify-center absolute bottom-8">
-          <a
-            href="https://github.com/langchain-ai/weblangchain"
-            target="_blank"
-            className="text-white flex items-center"
-          >
-            <img src="/images/github-mark.svg" className="h-4 mr-1" />
-            <span>View Source</span>
-          </a>
+          {/* <a href="https://github.com/langchain-ai/weblangchain" target="_blank" className="text-white flex items-center">
+            <img src="/images/github-mark.svg" className="h-4 mr-1" /><span>View Source</span>
+          </a> */}
         </footer>
       ) : (
         ""

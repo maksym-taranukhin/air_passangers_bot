@@ -188,37 +188,6 @@ export function ChatMessageBubble(props: {
     }
     setIsLoading(false);
   };
-  const viewTrace = async () => {
-    try {
-      setTraceIsLoading(true);
-      let apiBaseUrl = props.apiBaseUrl;
-      const response = await fetch(apiBaseUrl + "/get_trace", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          run_id: runId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.code === 400) {
-        toast.error("Unable to view trace");
-        throw new Error("Unable to view trace");
-      } else {
-        console.log(data);
-        const url = data.replace(/['"]+/g, "");
-        window.open(url, "_blank");
-        setTraceIsLoading(false);
-      }
-    } catch (e: any) {
-      console.error("Error:", e);
-      setTraceIsLoading(false);
-      toast.error(e.message);
-    }
-  };
 
   const sources = props.message.sources ?? [];
   const { filtered: filteredSources, indexMap: sourceIndexMap } =
@@ -389,24 +358,10 @@ export function ChatMessageBubble(props: {
             >
               👎
             </Button>
-            <Spacer />
-            <Button
-              size="sm"
-              variant="outline"
-              colorScheme={runId === null ? "blue" : "gray"}
-              onClick={(e) => {
-                e.preventDefault();
-                viewTrace();
-              }}
-              isLoading={traceIsLoading}
-              loadingText="🔄"
-            >
-              🛠️🔗
-            </Button>
           </HStack>
         )}
 
-      {!isUser && <Divider mt={4} mb={4} />}
+      {/* {!isUser && <Divider mt={4} mb={4} />} */}
     </VStack>
   );
 }
