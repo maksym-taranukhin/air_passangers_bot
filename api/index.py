@@ -98,7 +98,7 @@ class ChatRequest(TypedDict):
 
 
 def get_base_retriever():
-    return TavilySearchAPIRetriever(k=6, include_raw_content=True, include_images=True)
+    return TavilySearchAPIRetriever(k=1, include_raw_content=True, include_images=False)
 
 
 def _get_retriever():
@@ -163,23 +163,10 @@ def create_chain(
     llm: BaseLanguageModel,
     retriever: BaseRetriever,
 ) -> Runnable:
-    retriever_chain = create_retriever_chain(llm, retriever) | RunnableLambda(
-        format_docs
-    ).with_config(run_name="FormatDocumentChunks")
-    _context = RunnableMap(
-        {
-            "context": retriever_chain.with_config(run_name="RetrievalChain"),
-            "question": RunnableLambda(itemgetter("question")).with_config(
-                run_name="Itemgetter:question"
-            ),
-            "chat_history": RunnableLambda(itemgetter("chat_history")).with_config(
-                run_name="Itemgetter:chat_history"
-            ),
-        }
-    )
+
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", RESPONSE_TEMPLATE),
+            ("system", "You are an expert researcher and writer, tasked with answering any question."),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{question}"),
         ]
@@ -197,13 +184,54 @@ def create_chain(
                 run_name="SerializeHistory"
             ),
         }
-        | _context
         | response_synthesizer
     )
 
+# def create_chain(
+#     llm: BaseLanguageModel,
+#     retriever: BaseRetriever,
+# ) -> Runnable:
+#     retriever_chain = create_retriever_chain(llm, retriever) | RunnableLambda(
+#         format_docs
+#     ).with_config(run_name="FormatDocumentChunks")
+#     _context = RunnableMap(
+#         {
+#             "context": retriever_chain.with_config(run_name="RetrievalChain"),
+#             "question": RunnableLambda(itemgetter("question")).with_config(
+#                 run_name="Itemgetter:question"
+#             ),
+#             "chat_history": RunnableLambda(itemgetter("chat_history")).with_config(
+#                 run_name="Itemgetter:chat_history"
+#             ),
+#         }
+#     )
+#     prompt = ChatPromptTemplate.from_messages(
+#         [
+#             ("system", RESPONSE_TEMPLATE),
+#             MessagesPlaceholder(variable_name="chat_history"),
+#             ("human", "{question}"),
+#         ]
+#     )
+
+#     response_synthesizer = (prompt | llm | StrOutputParser()).with_config(
+#         run_name="GenerateResponse",
+#     )
+#     return (
+#         {
+#             "question": RunnableLambda(itemgetter("question")).with_config(
+#                 run_name="Itemgetter:question"
+#             ),
+#             "chat_history": RunnableLambda(serialize_history).with_config(
+#                 run_name="SerializeHistory"
+#             ),
+#         }
+#         | _context
+#         | response_synthesizer
+#     )
+
 
 llm = ChatOpenAI(
-    model="gpt-3.5-turbo-16k",
+    model="gpt-3.5-turbo",
     # model="gpt-4",
     streaming=True,
     temperature=0,
@@ -223,8 +251,9 @@ add_routes(app, chain, path="/api/chat", input_type=ChatRequest)
 
 
 @app.post("/api/atest")
-async def test(request: Request):
+async def atest(request: Request):
     return await request.json()
+
 
 @app.post("/api/feedback")
 async def send_feedback(request: Request):
