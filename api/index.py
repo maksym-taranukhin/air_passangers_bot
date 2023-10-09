@@ -213,8 +213,18 @@ retriever = _get_retriever()
 
 chain = create_chain(llm, retriever)
 
+
+@app.post("/api/test")
+def test(request: Request):
+    return {"result": "success", "code": 200}
+
+
 add_routes(app, chain, path="/api/chat", input_type=ChatRequest)
 
+
+@app.post("/api/atest")
+async def test(request: Request):
+    return await request.json()
 
 @app.post("/api/feedback")
 async def send_feedback(request: Request):
@@ -229,12 +239,6 @@ async def send_feedback(request: Request):
     vals = {**data, "key": key}
     client.create_feedback(**vals)
     return {"result": "posted feedback successfully", "code": 200}
-
-
-@app.post("/api/test")
-async def test(request: Request):
-    data = await request.json()
-    return data
 
 
 @app.patch("/api/feedback")
