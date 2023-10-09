@@ -10,7 +10,7 @@ export default function Home() {
     <ChakraProvider>
       <ToastContainer />
       <ChatWindow
-        apiBaseUrl={process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080"}
+        apiBaseUrl={process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api"}
         titleText="Air Passenger Rights Chatbot ✈️ (DEMO)"
         placeholder="Ask a question..."
       ></ChatWindow>

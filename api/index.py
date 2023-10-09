@@ -213,10 +213,10 @@ retriever = _get_retriever()
 
 chain = create_chain(llm, retriever)
 
-add_routes(app, chain, path="/chat", input_type=ChatRequest)
+add_routes(app, chain, path="/api/chat", input_type=ChatRequest)
 
 
-@app.post("/feedback")
+@app.post("/api/feedback")
 async def send_feedback(request: Request):
     data = await request.json()
     run_id = data.get("run_id")
@@ -231,13 +231,13 @@ async def send_feedback(request: Request):
     return {"result": "posted feedback successfully", "code": 200}
 
 
-@app.post("/test")
+@app.post("/api/test")
 async def test(request: Request):
     data = await request.json()
     return data
 
 
-@app.patch("/feedback")
+@app.patch("/api/feedback")
 async def update_feedback(request: Request):
     data = await request.json()
     feedback_id = data.get("feedback_id")
@@ -272,7 +272,7 @@ async def aget_trace_url(run_id: str) -> str:
     return await _arun(client.share_run, run_id)
 
 
-@app.post("/get_trace")
+@app.post("/api/get_trace")
 async def get_trace(request: Request):
     data = await request.json()
     run_id = data.get("run_id")

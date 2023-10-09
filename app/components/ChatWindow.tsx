@@ -270,7 +270,7 @@ export function ChatWindow(props: {
               Can I request a different seat if I am uncomfortable?
             </div>
           </div>
-        </div>  
+        </div>
       ) : (
         ""
       )}

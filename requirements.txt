@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+langchain
+langserve
+openai
+sse-starlette
+pydantic
+tiktoken
+tavily-python
+google-api-python-client
+html2text
