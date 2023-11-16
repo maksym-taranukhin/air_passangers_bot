@@ -66,6 +66,7 @@ const createAnswerElements = (
   >,
 ) => {
   const matches = Array.from(content.matchAll(/\[\^?(\d+)\^?\]/g));
+  // const matches = Array.from(content.matchAll(/\[\s*\$\{(\d+)\}\s*\]/g));
   const elements: JSX.Element[] = [];
   let prevCitationEndIndex = 0;
   let adjacentCitations: number[] = [];

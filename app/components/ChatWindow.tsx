@@ -1,7 +1,7 @@
 "use client";
 
+// Importing necessary libraries and components
 import React, { useRef, useState } from "react";
-
 import { v4 as uuidv4 } from "uuid";
 import { EmptyState } from "../components/EmptyState";
 import { ChatMessageBubble, Message } from "../components/ChatMessageBubble";
@@ -25,33 +25,40 @@ import {
 } from "@chakra-ui/react";
 import { ArrowUpIcon } from "@chakra-ui/icons";
 import { Source } from "./SourceBubble";
+import { log } from "console";
 
-export function ChatWindow(props: {
-  apiBaseUrl: string;
-  placeholder?: string;
-  titleText?: string;
-}) {
-  const conversationId = uuidv4();
-  const messageContainerRef = useRef<HTMLDivElement | null>(null);
-  const [messages, setMessages] = useState<Array<Message>>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+//////////////////////////////////////
+// ChatWindow component definition
+//////////////////////////////////////
+export function ChatWindow(props: { apiBaseUrl: string; placeholder?: string; titleText?: string;})
+{
+  // Initializing state variables and refs
+  const conversationId = uuidv4();                                    // Unique ID for the conversation
+  const messageContainerRef = useRef<HTMLDivElement | null>(null);    // Referece to the message container for scrolling, etc.
+  const [messages, setMessages] = useState<Array<Message>>([]);       // State for storing messages
+  const [input, setInput] = useState("");                             // State for the input field value
+  const [isLoading, setIsLoading] = useState(false);                  // State to track loading status
+  const { apiBaseUrl, titleText = "An LLM" } = props;                 // Destructuring props with default values
+  const [chatHistory, setChatHistory] = useState<{ human: string; ai: string }[]>([]); // State for storing chat history
 
-  const [chatHistory, setChatHistory] = useState<
-    { human: string; ai: string }[]
-  >([]);
 
-  const { apiBaseUrl, titleText } = props;
-
-  const sendMessage = async (message?: string) => {
+  //////////////////////////////////////
+  // Function to handle sending messages
+  //////////////////////////////////////
+  const sendMessage = async (message?: string) =>
+  {
     if (messageContainerRef.current) {
       messageContainerRef.current.classList.add("grow");
     }
-    if (isLoading) {
-      return;
-    }
+
+    // Prevent sending if already loading
+    if (isLoading) return;
+
+    // If message is not provided, use the input value
     const messageValue = message ?? input;
-    if (messageValue === "") return;
+    if (messageValue === "") return; // If message is empty, return
+
+    // Reset input field and update messages state
     setInput("");
     setMessages((prevMessages) => [
       ...prevMessages,
@@ -59,21 +66,17 @@ export function ChatWindow(props: {
     ]);
     setIsLoading(true);
 
+    // Initialize variables for handling streamed response
     let accumulatedMessage = "";
     let runId: string | undefined = undefined;
     let sources: Source[] | undefined = undefined;
     let messageIndex: number | null = null;
 
+    // Setting up custom renderer for Markdown
     let renderer = new Renderer();
-    renderer.paragraph = (text) => {
-      return text + "\n";
-    };
-    renderer.list = (text) => {
-      return `${text}\n\n`;
-    };
-    renderer.listitem = (text) => {
-      return `\n• ${text}`;
-    };
+    renderer.paragraph = (text) => { return text + "\n"; };
+    renderer.list = (text) => { return `${text}\n\n`; };
+    renderer.listitem = (text) => { return `\n• ${text}`; };
     renderer.code = (code, language) => {
       const validLanguage = hljs.getLanguage(language || "")
         ? language
@@ -88,68 +91,77 @@ export function ChatWindow(props: {
 
     try {
       const sourceStepName = "FinalSourceRetriever";
-      let streamedResponse: Record<string, any> = {};
-      await fetchEventSource(apiBaseUrl + "/chat/stream_log", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
-        },
-        body: JSON.stringify({
-          input: {
-            question: messageValue,
-            chat_history: chatHistory,
-          },
-          config: {
-            metadata: {
-              conversation_id: conversationId,
-            },
-          },
+      let streamedResponse: Record<string, any> = {}; // Initialize the streamed response
+
+      // Making an API call with SSE to receive real-time updates
+      await fetchEventSource(apiBaseUrl + "/chat/stream_log",
+      {
+        method:   "POST",
+        headers:  { "Content-Type": "application/json", Accept: "text/event-stream" },
+        body:     JSON.stringify({
+          input: { question: messageValue, chat_history: chatHistory },
+          config: { metadata: { conversation_id: conversationId } },
           include_names: [sourceStepName],
         }),
-        onerror(e) {
-          throw e;
-        },
-        onmessage(msg) {
-          if (msg.event === "end") {
-            setChatHistory((prevChatHistory) => [
-              ...prevChatHistory,
-              { human: messageValue, ai: accumulatedMessage },
-            ]);
+        openWhenHidden: true, // This is necessary for the chat to work when the tab is not active
+        onerror(err) { throw err; },
+        // Message handler
+        onmessage(msg)
+        {
+          // If the server sends an "end" event, we can stop listening and update the chat history
+          if (msg.event === "end")
+          {
+            // Update chat history with the human and AI messages
+            setChatHistory((prevChatHistory) => [...prevChatHistory,{ human: messageValue, ai: accumulatedMessage }]);
+            // Set loading state to false as the message transaction is complete
             setIsLoading(false);
             return;
           }
-          if (msg.event === "data" && msg.data) {
+
+          // Handle the 'data' event containing a part of the response
+          if (msg.event === "data" && msg.data)
+          {
+            // Parse the chunk of data received from the server
             const chunk = JSON.parse(msg.data);
-            streamedResponse = applyPatch(
-              streamedResponse,
-              chunk.ops,
-            ).newDocument;
-            if (
-              Array.isArray(
-                streamedResponse?.logs?.[sourceStepName]?.final_output
-                  ?.documents,
-              )
-            ) {
-              sources = streamedResponse.logs[
-                sourceStepName
-              ].final_output.documents.map((doc: Record<string, any>) => ({
-                url: doc.metadata.source,
-                title: doc.metadata.title,
-                images: doc.metadata.images,
-              }));
+
+            // Apply the JSON patch to the streamed response to update it
+            streamedResponse = applyPatch(streamedResponse, chunk.ops).newDocument;
+
+            // Check if the response includes source information and update accordingly
+            if (Array.isArray(streamedResponse?.logs?.[sourceStepName]?.final_output?.documents))
+            {
+              let docs = streamedResponse.logs[sourceStepName].final_output.documents;
+
+              sources = docs.map((doc: Record<string, any>) => {
+                // console.log("Document URL:", doc.page_content);
+                return {
+                  url: doc.metadata.source,
+                  title: doc.metadata.title,
+                  images: doc.metadata.images,
+                  page_content: doc.page_content,
+                };
+              });
             }
-            if (streamedResponse.id !== undefined) {
-              runId = streamedResponse.id;
-            }
+
+            // Update the run ID if available in the response
+            if (streamedResponse.id !== undefined) runId = streamedResponse.id;
+
+            // Aggregate the message chunks received into a single message
             if (Array.isArray(streamedResponse?.streamed_output)) {
               accumulatedMessage = streamedResponse.streamed_output.join("");
             }
+
+            // Parse the accumulated message to HTML using the marked library
             const parsedResult = marked.parse(accumulatedMessage);
 
-            setMessages((prevMessages) => {
+            // Update the messages state with the new or updated AI message
+            setMessages((prevMessages) =>
+            {
               let newMessages = [...prevMessages];
-              if (messageIndex === null) {
+
+              // If this is a new message, add it to the array
+              if (messageIndex === null || newMessages[messageIndex] === undefined)
+              {
                 messageIndex = newMessages.length;
                 newMessages.push({
                   id: Math.random().toString(),
@@ -158,24 +170,30 @@ export function ChatWindow(props: {
                   sources: sources,
                   role: "assistant",
                 });
-              } else {
+              }
+              // If updating an existing message, modify its content
+              else if (newMessages[messageIndex] !== undefined)
+              {
                 newMessages[messageIndex].content = parsedResult.trim();
                 newMessages[messageIndex].runId = runId;
                 newMessages[messageIndex].sources = sources;
               }
+
               return newMessages;
             });
+
           }
         },
       });
-    } catch (e: any) {
+    } catch (e) {
       setMessages((prevMessages) => prevMessages.slice(0, -1));
       setIsLoading(false);
       setInput(messageValue);
-      toast.error(e.message);
+      throw e;
     }
   };
 
+  // Function to send initial predefined questions
   const sendInitialQuestion = async (question: string) => {
     await sendMessage(question);
   };

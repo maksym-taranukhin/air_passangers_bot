@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "air-passenger-bot"
+version = "0.1.0"
+description = ""
+authors = ["Max"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+openai = "*"
+fastapi = "*"
+pydantic = "*"
+langchain = "*"
+uvicorn = "^0.23.2"
+beautifulsoup4 = ">=4.12.2"
+tiktoken = "^0.4.0"
+weaviate-client = "^3.23.2"
+psycopg2 = "^2.9.7"
+lxml = "^4.9.3"
+langserve = "<=0.0.24"
+sse-starlette = ">=1.6.4"
+tavily-python = "^0.1.8"
+python-dotenv = "*"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.9.1"
+isort = "^5.12.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

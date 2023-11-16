@@ -3,9 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "fastapi-dev": "pip3 install -r requirements.txt && python3 -m uvicorn api.index:app --reload",
-    "next-dev": "next dev",
-    "dev": "concurrently \"npm run next-dev\" \"npm run fastapi-dev\"",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -13,6 +11,7 @@
   "dependencies": {
     "@chakra-ui/icons": "^2.1.0",
     "@chakra-ui/react": "^2.8.1",
+    "@clerk/nextjs": "^4.25.4",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@microsoft/fetch-event-source": "^2.0.1",
@@ -21,6 +20,7 @@
     "@types/react": "18.2.20",
     "@types/react-dom": "18.2.7",
     "@types/uuid": "^9.0.5",
+    "@vercel/analytics": "^1.1.0",
     "autoprefixer": "10.4.14",
     "emojisplosion": "^2.6.1",
     "eslint": "8.46.0",
@@ -29,7 +29,7 @@
     "framer-motion": "^10.16.4",
     "highlight.js": "^11.8.0",
     "marked": "^7.0.2",
-    "next": "13.4.13",
+    "next": "^14.0.2",
     "postcss": "8.4.27",
     "react": "18.2.0",
     "react-dom": "18.2.0",
