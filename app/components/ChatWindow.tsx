@@ -70,6 +70,7 @@ export function ChatWindow(props: { apiBaseUrl: string; placeholder?: string; ti
     let accumulatedMessage = "";
     let runId: string | undefined = undefined;
     let sources: Source[] | undefined = undefined;
+    let questions: string[] | undefined = undefined;
     let messageIndex: number | null = null;
 
     // Setting up custom renderer for Markdown
@@ -91,6 +92,7 @@ export function ChatWindow(props: { apiBaseUrl: string; placeholder?: string; ti
 
     try {
       const sourceStepName = "FinalSourceRetriever";
+      const questionStepName = "QueryDocsMapping";
       let streamedResponse: Record<string, any> = {}; // Initialize the streamed response
 
       // Making an API call with SSE to receive real-time updates
@@ -101,7 +103,7 @@ export function ChatWindow(props: { apiBaseUrl: string; placeholder?: string; ti
         body:     JSON.stringify({
           input: { question: messageValue, chat_history: chatHistory },
           config: { metadata: { conversation_id: conversationId } },
-          include_names: [sourceStepName],
+          include_names: [sourceStepName, questionStepName],
         }),
         openWhenHidden: true, // This is necessary for the chat to work when the tab is not active
         onerror(err) { throw err; },
@@ -127,18 +129,28 @@ export function ChatWindow(props: { apiBaseUrl: string; placeholder?: string; ti
             // Apply the JSON patch to the streamed response to update it
             streamedResponse = applyPatch(streamedResponse, chunk.ops).newDocument;
 
+            console.log("Streamed Response:", streamedResponse.logs);
+            // console.log("is Array:", Array.isArray(streamedResponse?.logs?.[questionStepName]?.final_output?.output));
+            // console.log("is Map:", streamedResponse?.logs?.[questionStepName]?.final_output?.output instanceof Map);
+            // console.log("is object:", typeof streamedResponse?.logs?.[questionStepName]?.final_output?.output === "object")
+            // console.log("type:", typeof streamedResponse?.logs?.[questionStepName]?.final_output?.output);
+
             // Check if the response includes source information and update accordingly
-            if (Array.isArray(streamedResponse?.logs?.[sourceStepName]?.final_output?.documents))
+            if (Array.isArray(streamedResponse?.logs?.[questionStepName]?.final_output?.output))
             {
-              let docs = streamedResponse.logs[sourceStepName].final_output.documents;
+              let docs = streamedResponse.logs[questionStepName].final_output.output;
+
+              // merge a list of lists into a single list
+              docs = [].concat.apply([], docs);
 
               sources = docs.map((doc: Record<string, any>) => {
-                // console.log("Document URL:", doc.page_content);
+                // console.log("Document:\n", doc.page_content);
                 return {
                   url: doc.metadata.source,
                   title: doc.metadata.title,
                   images: doc.metadata.images,
-                  page_content: doc.page_content,
+                  query: doc.metadata.query,
+                  content: marked.parse(doc.page_content).trim(),
                 };
               });
             }
@@ -207,13 +219,9 @@ export function ChatWindow(props: { apiBaseUrl: string; placeholder?: string; ti
     >
       {messages.length > 0 && (
         <Flex direction={"column"} alignItems={"center"} paddingBottom={"20px"}>
-          <Heading fontSize="2xl" fontWeight={"medium"} mb={1} color={"white"}>
+          <Heading fontSize="2xl" fontWeight={"medium"} mb={1} color={"black"}>
             {titleText}
           </Heading>
-          {/* <Heading fontSize="md" fontWeight={"normal"} mb={1} color={"white"}>
-            Powered by <a target="_blank" href="https://tavily.com" className="text-sky-400">Tavily</a>
-          </Heading> */}
-          <Heading fontSize="lg" fontWeight={"normal"} mb={1} color={"white"}>We appreciate feedback!</Heading>
         </Flex>
       )}
       <div
@@ -244,7 +252,7 @@ export function ChatWindow(props: { apiBaseUrl: string; placeholder?: string; ti
           rounded={"full"}
           type={"text"}
           placeholder="Ask your question or describe your issue..."
-          textColor={"white"}
+          textColor={"black"}
           borderColor={"rgb(58, 58, 61)"}
           onSubmit={(e) => {
             e.preventDefault();
@@ -275,16 +283,19 @@ export function ChatWindow(props: { apiBaseUrl: string; placeholder?: string; ti
       {messages.length === 0 ? (
         <div className="w-50 text-center flex flex-col items-center">
           <div className="flex flex-wrap justify-center w-full mt-4">
-            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-500 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-700">
+              I need help with a canceled flight and damaged luggage. Can I get on another flight without paying more, and what should I do about the luggage?
+            </div>
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-500 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-700">
               If my flight is delayed or canceled, am I eligible for compensation?
             </div>
-            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-500 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-700">
               What should I do if my checked baggage is lost?
             </div>
-            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-500 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-700">
               Can I get a refund if I decide not to travel or if I missed my flight?
             </div>
-            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-700 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-500">
+            <div onMouseUp={(e) => sendInitialQuestion((e.target as HTMLDivElement).innerText)} className="bg-stone-500 px-2 py-1 mx-2 rounded cursor-pointer justify-center text-stone-200 hover:bg-stone-700">
               Can I request a different seat if I am uncomfortable?
             </div>
           </div>

@@ -35,80 +35,94 @@ export interface Feedback {
   comment?: string;
 }
 
-const filterSources = (sources: Source[]) => {
-  const filtered: Source[] = [];
-  const urlMap = new Map<string, number>();
-  const indexMap = new Map<number, number>();
-  sources.forEach((source, i) => {
-    const { url } = source;
-    const index = urlMap.get(url);
-    if (index === undefined) {
-      urlMap.set(url, i);
-      indexMap.set(i, filtered.length);
-      filtered.push(source);
-    } else {
-      const resolvedIndex = indexMap.get(index);
-      if (resolvedIndex !== undefined) {
-        indexMap.set(i, resolvedIndex);
-      }
+// const filterSources = (sources: Source[]) => {
+//   const filtered: Source[] = [];
+//   const urlMap = new Map<string, number>();
+//   const indexMap = new Map<number, number>();
+//   sources.forEach((source, i) => {
+//     const { url } = source;
+//     const index = urlMap.get(url);
+//     if (index === undefined) {
+//       urlMap.set(url, i);
+//       indexMap.set(i, filtered.length);
+//       filtered.push(source);
+//     } else {
+//       const resolvedIndex = indexMap.get(index);
+//       if (resolvedIndex !== undefined) {
+//         indexMap.set(i, resolvedIndex);
+//       }
+//     }
+//   });
+//   return { filtered, indexMap };
+// };
+
+// Group sources by query
+const groupSourcesByQuery = (sources: Source[]) => {
+  const queryMap = new Map<string, Source[]>();
+
+  sources.forEach((source) => {
+    const { query } = source;
+    if (!queryMap.has(query)) {
+      queryMap.set(query, []);
     }
+    queryMap.get(query)?.push(source);
   });
-  return { filtered, indexMap };
+
+  return queryMap;
 };
 
 const createAnswerElements = (
-  content: string,
-  filteredSources: Source[],
-  sourceIndexMap: Map<number, number>,
-  highlighedSourceLinkStates: boolean[],
-  setHighlightedSourceLinkStates: React.Dispatch<
-    React.SetStateAction<boolean[]>
-  >,
+  // content: string,
+  sources: Source[],
+  // sourceIndexMap: Map<number, number>,
+  // highlighedSourceLinkStates: boolean[],
+  // setHighlightedSourceLinkStates: React.Dispatch<
+    // React.SetStateAction<boolean[]>
+  // >,
 ) => {
-  const matches = Array.from(content.matchAll(/\[\^?(\d+)\^?\]/g));
-  // const matches = Array.from(content.matchAll(/\[\s*\$\{(\d+)\}\s*\]/g));
+  // const matches = Array.from(content.matchAll(/\[\^?(\d+)\^?\]/g));
   const elements: JSX.Element[] = [];
   let prevCitationEndIndex = 0;
-  let adjacentCitations: number[] = [];
-  matches.forEach((match) => {
-    const sourceNum = parseInt(match[1], 10);
-    const resolvedNum = sourceIndexMap.get(sourceNum) ?? 10;
-    if (prevCitationEndIndex + 1 !== match.index) {
-      adjacentCitations = [];
-    }
-    if (match.index !== null && resolvedNum < filteredSources.length) {
-      if (!adjacentCitations.includes(resolvedNum)) {
-        elements.push(
-          <span
-            key={`content:${prevCitationEndIndex}`}
-            dangerouslySetInnerHTML={{
-              __html: content.slice(prevCitationEndIndex, match.index),
-            }}
-          ></span>,
-        );
-        elements.push(
-          <span key={`span:${prevCitationEndIndex}`}>
-            <InlineCitation
-              key={`citation:${prevCitationEndIndex}`}
-              source={filteredSources[resolvedNum]}
-              sourceNumber={resolvedNum}
-              highlighted={highlighedSourceLinkStates[resolvedNum]}
-              onMouseEnter={() =>
-                setHighlightedSourceLinkStates(
-                  filteredSources.map((_, i) => i === resolvedNum),
-                )
-              }
-              onMouseLeave={() =>
-                setHighlightedSourceLinkStates(filteredSources.map(() => false))
-              }
-            />
-          </span>,
-        );
-        adjacentCitations.push(resolvedNum);
-      }
-      prevCitationEndIndex = (match?.index ?? 0) + match[0].length;
-    }
-  });
+  // let adjacentCitations: number[] = [];
+  // matches.forEach((match) => {
+  //   const sourceNum = parseInt(match[1], 10);
+  //   const resolvedNum = sourceIndexMap.get(sourceNum) ?? 10;
+  //   if (prevCitationEndIndex + 1 !== match.index) {
+  //     adjacentCitations = [];
+  //   }
+  //   if (match.index !== null && resolvedNum < filteredSources.length) {
+  //     if (!adjacentCitations.includes(resolvedNum)) {
+  //       elements.push(
+  //         <span
+  //           key={`content:${prevCitationEndIndex}`}
+  //           dangerouslySetInnerHTML={{
+  //             __html: content.slice(prevCitationEndIndex, match.index),
+  //           }}
+  //         ></span>,
+  //       );
+  //       elements.push(
+  //         <span key={`span:${prevCitationEndIndex}`}>
+  //           <InlineCitation
+  //             key={`citation:${prevCitationEndIndex}`}
+  //             source={filteredSources[resolvedNum]}
+  //             sourceNumber={resolvedNum}
+  //             highlighted={highlighedSourceLinkStates[resolvedNum]}
+  //             onMouseEnter={() =>
+  //               setHighlightedSourceLinkStates(
+  //                 filteredSources.map((_, i) => i === resolvedNum),
+  //               )
+  //             }
+  //             onMouseLeave={() =>
+  //               setHighlightedSourceLinkStates(filteredSources.map(() => false))
+  //             }
+  //           />
+  //         </span>,
+  //       );
+  //       adjacentCitations.push(resolvedNum);
+  //     }
+  //     prevCitationEndIndex = (match?.index ?? 0) + match[0].length;
+  //   }
+  // });
   elements.push(
     <span
       key={`content:${prevCitationEndIndex}`}
@@ -191,33 +205,45 @@ export function ChatMessageBubble(props: {
   };
 
   const sources = props.message.sources ?? [];
-  const { filtered: filteredSources, indexMap: sourceIndexMap } =
-    filterSources(sources);
+  // const { filtered: filteredSources, indexMap: sourceIndexMap } =
+  //   filterSources(sources);
+
+  const queryToSourceMap = groupSourcesByQuery(sources);
 
   // Use an array of highlighted states as a state since React
   // complains when creating states in a loop
-  const [highlighedSourceLinkStates, setHighlightedSourceLinkStates] = useState(
-    filteredSources.map(() => false),
-  );
-  const answerElements =
-    role === "assistant"
-      ? createAnswerElements(
-          content,
-          filteredSources,
-          sourceIndexMap,
-          highlighedSourceLinkStates,
-          setHighlightedSourceLinkStates,
-        )
-      : [];
+  // const [highlighedSourceLinkStates, setHighlightedSourceLinkStates] = useState(
+  //   sources.map(() => false),
+  // );
 
-  const imageUrls = filteredSources[0]?.images ?? [];
-  const imageElements = imageUrls.map((imageUrl) => (
-    <img
-      key={`image:${imageUrl}`}
-      src={imageUrl}
-      className="block h-full mr-2"
-    ></img>
-  ));
+  const [highlighedSourceLinkStates, setHighlightedSourceLinkStates] = useState(() =>
+    Object.fromEntries(
+      Array.from(queryToSourceMap.entries()).flatMap(([_, sources], queryIndex) =>
+        sources.map((_, sourceIndex) => [`${queryIndex}-${sourceIndex}`, false])
+      )
+    )
+  );
+
+  // const answerElements = []
+  //   role === "assistant"
+  //     ? createAnswerElements(
+  //       queryToSourceMap
+  //         // content,
+  //         // sources,
+  //         // sourceIndexMap,
+  //         // highlighedSourceLinkStates,
+  //         // setHighlightedSourceLinkStates,
+  //       )
+  //     : [];
+
+  // const imageUrls = filteredSources[0]?.images ?? [];
+  // const imageElements = imageUrls.map((imageUrl) => (
+  //   <img
+  //     key={`image:${imageUrl}`}
+  //     src={imageUrl}
+  //     className="block h-full mr-2"
+  //   ></img>
+  // ));
 
   const animateButton = (buttonId: string) => {
     let button: HTMLButtonElement | null;
@@ -252,72 +278,100 @@ export function ChatMessageBubble(props: {
 
   return (
     <VStack align="start" spacing={5} pb={5}>
-      {!isUser && filteredSources.length > 0 && (
+      {!isUser && queryToSourceMap.size > 0 && (
         <>
-          <Flex direction={"column"} width={"100%"}>
+          <Flex direction={"column"} width={"95%"}>
             <VStack spacing={"5px"} align={"start"} width={"100%"}>
               <Heading
                 fontSize="lg"
                 fontWeight={"medium"}
                 mb={1}
-                color={"blue.100"}
+                color={"blue.500"}
                 paddingBottom={"12px"}
                 className="flex items-center"
               >
                 <SearchIcon className="mr-1" />
-                Sources
+                Results
               </Heading>
-              <HStack spacing={"10px"} maxWidth={"100%"} overflow={"auto"}>
-                {filteredSources.map((source, index) => (
-                  <Box key={index} alignSelf={"stretch"} width={60}>
+              <VStack spacing={"10px"} maxWidth={"100%"} overflow={"auto"}>
+                {Array.from(queryToSourceMap.entries()).map(([query, sources], queryIndex) => (
+                  <Box key={`query-${queryIndex}`} alignSelf={"stretch"}>
+                    <h2 className="text-green-700 text-2xl py-4 font-medium">
+                      {query}
+                    </h2>
+                    {sources.map((source, index) => (
+                      <Box key={`source-${queryIndex}-${index}`} alignSelf={"stretch"}>
+                        <SourceBubble
+                          source={source}
+                          highlighted={highlighedSourceLinkStates[`${queryIndex}-${index}`]}
+                          index={index}
+                          onMouseEnter={() =>
+                            setHighlightedSourceLinkStates(
+                              Object.fromEntries(
+                                Array.from(queryToSourceMap.entries()).flatMap(([_, sources], qIndex) =>
+                                  sources.map((_, sIndex) => [`${qIndex}-${sIndex}`, qIndex === queryIndex && sIndex === index])
+                                )
+                              )
+                            )
+                          }
+                          onMouseLeave={() =>
+                            setHighlightedSourceLinkStates(
+                              Object.fromEntries(
+                                Array.from(queryToSourceMap.entries()).flatMap(([_, sources], qIndex) =>
+                                  sources.map((_, sIndex) => [`${qIndex}-${sIndex}`, false])
+                                )
+                              )
+                            )
+                          }
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                ))}
+              </VStack>
+
+              {/* <VStack spacing={"10px"} maxWidth={"100%"} overflow={"auto"}>
+                {sources.map((source, index) => (
+                  <Box key={index} alignSelf={"stretch"}>
                     <SourceBubble
                       source={source}
                       highlighted={highlighedSourceLinkStates[index]}
                       index={index}
                       onMouseEnter={() =>
                         setHighlightedSourceLinkStates(
-                          filteredSources.map((_, i) => i === index),
+                          sources.map((_, i) => i === index),
                         )
                       }
                       onMouseLeave={() =>
                         setHighlightedSourceLinkStates(
-                          filteredSources.map(() => false),
+                          sources.map(() => false),
                         )
                       }
                     />
                   </Box>
                 ))}
-              </HStack>
+              </VStack> */}
             </VStack>
           </Flex>
-
-          <Heading
-            size="lg"
-            fontWeight="medium"
-            color="blue.100"
-            className="flex items-center"
-          >
-            <InfoOutlineIcon className="mr-1" /> Answer
-          </Heading>
         </>
       )}
 
       {isUser ? (
-        <Heading size="lg" fontWeight="medium" color="white">
+        <Heading size="lg" fontWeight="medium" color="black">
           {content}
         </Heading>
       ) : (
         <>
-          <Box className="whitespace-pre-wrap" color="white">
+          {/* <Box className="whitespace-pre-wrap" color="black">
             {answerElements}
-          </Box>
-          {imageUrls.length && props.messageCompleted ? (
+          </Box> */}
+          {/* {imageUrls.length && props.messageCompleted ? (
             <Flex className="w-full max-w-full flex h-[196px] overflow-auto">
               {imageElements}
             </Flex>
           ) : (
             ""
-          )}
+          )} */}
         </>
       )}
 

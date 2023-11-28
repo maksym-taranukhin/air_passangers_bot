@@ -5,6 +5,8 @@ export type Source = {
   url: string;
   title: string;
   images: string[];
+  content: string;
+  query: string;
 };
 
 export function SourceBubble(props: {
@@ -53,23 +55,31 @@ export function SourceBubble(props: {
   const hostname = new URL(props.source.url).hostname.replace("www.", "");
 
   return (
-    <a
-      href={props.source.url}
-      target="_blank"
-      onMouseEnter={props.onMouseEnter}
-      onMouseLeave={props.onMouseLeave}
-      className="hover:no-underline"
-    >
-      <div
-        className={`${
-          props.highlighted ? "bg-stone-500" : "bg-stone-700"
-        } rounded p-4 text-white h-full text-xs flex flex-col mb-4`}
+    <div>
+      <a
+        href={props.source.url}
+        target="_blank"
+        onMouseEnter={props.onMouseEnter}
+        onMouseLeave={props.onMouseLeave}
+        className="hover:no-underline"
       >
-        <div className="line-clamp-4">{props.source.title}</div>
-        <div className="text-white mt-auto">
-          {hostname} [{props.index}]
+        <div
+          className={`${
+            props.highlighted ? "bg-stone-500" : "bg-stone-700"
+          } rounded p-4 text-white h-full text-sm flex flex-col mb-4`}
+        >
+          <strong className="text-lg line-clamp-4">{props.source.title}</strong>
+          
+          <div className="content-section mt-2">
+            {props.source.content}
+          </div>
+
+          <div className="mt-auto text-blue-500 ">
+            {props.source.url}
+          </div>
+
         </div>
-      </div>
-    </a>
+      </a>
+    </div>
   );
 }
