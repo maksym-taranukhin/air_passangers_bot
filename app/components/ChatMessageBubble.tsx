@@ -71,18 +71,18 @@ const groupSourcesByQuery = (sources: Source[]) => {
   return queryMap;
 };
 
-const createAnswerElements = (
+// const createAnswerElements = (
   // content: string,
-  sources: Source[],
+  // sources: Source[],
   // sourceIndexMap: Map<number, number>,
   // highlighedSourceLinkStates: boolean[],
   // setHighlightedSourceLinkStates: React.Dispatch<
     // React.SetStateAction<boolean[]>
   // >,
-) => {
+// ) => {
   // const matches = Array.from(content.matchAll(/\[\^?(\d+)\^?\]/g));
-  const elements: JSX.Element[] = [];
-  let prevCitationEndIndex = 0;
+  // const elements: JSX.Element[] = [];
+  // let prevCitationEndIndex = 0;
   // let adjacentCitations: number[] = [];
   // matches.forEach((match) => {
   //   const sourceNum = parseInt(match[1], 10);
@@ -123,14 +123,14 @@ const createAnswerElements = (
   //     prevCitationEndIndex = (match?.index ?? 0) + match[0].length;
   //   }
   // });
-  elements.push(
-    <span
-      key={`content:${prevCitationEndIndex}`}
-      dangerouslySetInnerHTML={{ __html: content.slice(prevCitationEndIndex) }}
-    ></span>,
-  );
-  return elements;
-};
+//   elements.push(
+//     <span
+//       key={`content:${prevCitationEndIndex}`}
+//       dangerouslySetInnerHTML={{ __html: content.slice(prevCitationEndIndex) }}
+//     ></span>,
+//   );
+//   return elements;
+// };
 
 export function ChatMessageBubble(props: {
   message: Message;
