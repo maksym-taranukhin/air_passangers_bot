@@ -1,14 +1,14 @@
 """Main entrypoint for the app."""
-import asyncio
 from operator import itemgetter
 from typing import Dict, List, Optional, Sequence
 
-import langsmith
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder, PromptTemplate
+from langchain.output_parsers import NumberedListOutputParser
+from langchain.prompts import ChatPromptTemplate, PromptTemplate
 from langchain.retrievers import (
     ContextualCompressionRetriever,
     TavilySearchAPIRetriever,
@@ -21,21 +21,16 @@ from langchain.schema import Document
 from langchain.schema.language_model import BaseLanguageModel
 from langchain.schema.messages import AIMessage, HumanMessage
 from langchain.schema.output_parser import StrOutputParser
-from langchain.output_parsers import NumberedListOutputParser
 from langchain.schema.retriever import BaseRetriever
 from langchain.schema.runnable import (
     Runnable,
-    RunnableBranch,
     RunnableLambda,
-    RunnableMap,
     RunnablePassthrough,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langserve import add_routes
 from langsmith import Client
 from typing_extensions import TypedDict
-
-from dotenv import find_dotenv, load_dotenv
 
 load_dotenv()
 
@@ -135,13 +130,6 @@ def create_retriever_chain(
     )
 
     return retriever_chain
-    # return RunnableBranch(
-    #     (
-    #         RunnableLambda(lambda x: bool(x.get("chat_history"))),
-    #         (RunnablePassthrough.assign(question=condense_question_chain) | retriever_chain),
-    #     ),
-    #     retriever_chain,  # default branch
-    # ).with_config(run_name="RouteDependingOnChatHistory")
 
 
 def serialize_history(request: ChatRequest):
